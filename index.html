@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Fruit Spin</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --plum:#2A1233;      /* фон: спелая слива */
+  --plum-2:#3E1D4B;
+  --plum-3:#57306A;
+  --cherry:#E3263E;    /* кнопка и выигрыш */
+  --cherry-dark:#A3142A;
+  --lemon:#FFD23F;     /* монеты */
+  --leaf:#3BB273;      /* опыт и успех */
+  --peel:#FFF4E0;      /* окно барабанов */
+  --ink:#2A1233;
+  --text:#FFF4E0;
+  --muted:#C9AFD4;
+  --gold:#FFD23F;       /* текст-акцент: суммы, выигрыш */
+  --bad:#FF7A8A;
+  --n:3;
+  --cell:min(calc((min(100vw,480px) - 76px) / var(--n)), 112px);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+/* тёмная тема: графит без фиолетового */
+:root[data-theme="dark"]{--plum:#141217;--plum-2:#221F27;--plum-3:#34303B;--text:#F4F1F6;--muted:#A9A2B0}
+/* светлая тема: кремовая, как мякоть фрукта */
+:root[data-theme="light"]{color-scheme:light;--plum:#FBF4E8;--plum-2:#FFFFFF;--plum-3:#EFE3D2;--text:#2A1233;--muted:#6E5A74;--gold:#A86A00;--bad:#C8102E;--peel:#FFF8EC}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{
+  background:var(--plum);
+  background-image:radial-gradient(circle at 50% -10%, var(--plum-3) 0, transparent 60%);
+  color:var(--text);
+  font-family:Rubik,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-tap-highlight-color:transparent;
+  overscroll-behavior:none;
+  user-select:none;-webkit-user-select:none;
+}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button:focus-visible{outline:3px solid var(--lemon);outline-offset:2px}
+.app{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding:12px 16px 0}
+
+/* верхняя панель */
+.top{display:flex;align-items:center;gap:10px}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--plum-3);display:grid;place-items:center;font-weight:700;overflow:hidden;flex:none}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.who{flex:1;min-width:0}
+.who .name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xp{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:3px}
+.xp .bar{flex:1;height:6px;border-radius:3px;background:var(--plum-2);overflow:hidden}
+.xp .fill{height:100%;background:var(--leaf);width:0;transition:width .4s}
+.snd{width:40px;height:40px;border-radius:50%;background:var(--plum-2);font-size:18px;flex:none}
+.balance{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--plum-2);border-radius:18px;padding:10px 16px;margin-bottom:14px}
+.balance .lbl{color:var(--muted);font-size:14px}
+.balance .num{font-family:Unbounded,Rubik,sans-serif;font-weight:800;font-size:26px;font-variant-numeric:tabular-nums;color:var(--gold)}
+.delta{position:absolute;right:16px;top:50%;font-weight:700;font-size:18px;pointer-events:none;animation:fly 1.1s ease-out forwards}
+.delta.minus{color:var(--bad)}.delta.plus{color:var(--leaf)}
+@keyframes fly{from{opacity:1;transform:translateY(-50%)}to{opacity:0;transform:translateY(-160%)}}
+.test{position:absolute;left:10px;top:50%;transform:translateY(-50%);background:var(--leaf);color:var(--ink);font-weight:700;font-size:13px;border-radius:10px;padding:6px 8px}
+.hint{text-align:center;font-size:13px;color:var(--muted);margin-top:12px}
+.hint b{color:var(--gold)}
+.coin{width:24px;height:24px;border-radius:50%;background:var(--lemon);box-shadow:inset 0 -3px 0 #E0A800;flex:none}
+
+/* автомат */
+h1{font-family:Unbounded,Rubik,sans-serif;font-weight:800;font-size:clamp(30px,9vw,42px);text-align:center;margin:18px 0 12px;letter-spacing:-.01em;line-height:1}
+h1 .f{color:var(--gold)}
+h1 .s{color:var(--cherry);display:inline-block;transform:rotate(-4deg)}
+.machine{position:relative;background:var(--cherry);border-radius:28px;padding:12px;box-shadow:0 8px 0 var(--cherry-dark)}
+.window{position:relative;display:grid;grid-template-columns:repeat(var(--n),1fr);gap:6px;background:var(--cherry-dark);border-radius:18px;padding:6px;overflow:hidden}
+.reel{height:calc(var(--cell)*3);min-width:0;overflow:hidden;background:var(--peel);border-radius:12px;position:relative}
+.reel::before,.reel::after{content:"";position:absolute;left:0;right:0;height:18%;z-index:2;pointer-events:none}
+.reel::before{top:0;background:linear-gradient(var(--peel),transparent)}
+.reel::after{bottom:0;background:linear-gradient(transparent,var(--peel))}
+.strip{will-change:transform}
+.cell{height:var(--cell);display:grid;place-items:center;font-size:calc(var(--cell)*.56);line-height:1}
+.cell svg{width:calc(var(--cell)*.6);height:calc(var(--cell)*.6)}
+.cell.hit{animation:pop .5s ease-in-out 3}
+@keyframes pop{50%{transform:scale(1.18)}}
+.lines{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:3;overflow:visible}
+.lines line{stroke:var(--lemon);stroke-width:5;stroke-linecap:round;opacity:.9}
+.msg{min-height:28px;text-align:center;font-weight:700;margin:16px 0 4px;font-size:18px}
+.msg.win{color:var(--gold)}
+.msg .mult{display:inline-block;background:var(--leaf);color:var(--ink);border-radius:8px;padding:0 6px;margin-left:6px}
+
+/* управление */
+.controls{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px}
+.bet{display:flex;align-items:center;gap:4px;background:var(--plum-2);border-radius:16px;padding:4px}
+.bet button{width:40px;height:40px;border-radius:12px;background:var(--plum-3);font-size:22px;font-weight:700}
+.bet button:disabled{opacity:.35}
+.bet .val{min-width:62px;text-align:center}
+.bet .val b{display:block;font-size:18px;font-variant-numeric:tabular-nums}
+.bet .val small{font-size:11px;color:var(--muted)}
+.spin{flex:none;width:104px;height:104px;border-radius:50%;background:var(--lemon);color:var(--ink);font-family:Unbounded,Rubik,sans-serif;font-weight:800;font-size:16px;box-shadow:0 6px 0 #C79A00;transition:transform .08s,box-shadow .08s}
+.spin:active:not(:disabled){transform:translateY(5px);box-shadow:0 1px 0 #C79A00}
+.spin:disabled{filter:saturate(.4) brightness(.8)}
+.mode{display:flex;gap:4px;background:var(--plum-2);border-radius:14px;padding:4px;margin:4px 0 14px}
+.mode button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 6px;border-radius:10px;font-size:14px;color:var(--muted)}
+.mode button.on{background:var(--plum-3);color:var(--text);font-weight:700}
+.mode button:disabled{opacity:.6}
+.mode svg{width:30px;height:18px;flex:none}
+.mode svg polyline{fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.lines polyline{fill:none;stroke:var(--lemon);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.lines polyline.bent{stroke:var(--leaf)}
+.pay .x small{color:var(--leaf);font-size:13px;margin-left:8px}
+.paybtn{background:var(--plum-2);border-radius:16px;padding:0 12px;height:48px;font-size:14px;color:var(--muted)}
+
+/* нижнее меню */
+nav{margin-top:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:18px 0 14px}
+.who-btn{display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-align:left;padding:0}
+.field{display:block;margin-bottom:14px}
+.field>span{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.field input,.field select{width:100%;height:48px;border-radius:12px;border:2px solid var(--plum-3);background:var(--plum);color:var(--text);font:inherit;font-size:16px;padding:0 12px}
+.field input:focus,.field select:focus{outline:none;border-color:var(--lemon)}
+.phone-row{display:flex;gap:8px}
+.phone-row input{flex:1;min-width:0}
+.small{flex:none;height:48px;padding:0 12px;border-radius:12px;background:var(--plum-3);font-size:14px}
+.field select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%;background-size:6px 6px;background-repeat:no-repeat}
+.theme-pick{margin:0}
+.theme-pick .sw{width:16px;height:16px;border-radius:50%;border:2px solid var(--muted);flex:none}
+.top-btns{display:flex;gap:8px}
+.pf-photo{display:flex;align-items:center;gap:14px;margin:6px 0 18px}
+.pf-photo .avatar{width:76px;height:76px;font-size:28px}
+.err{color:var(--bad);font-size:14px;min-height:20px;margin:0 0 8px}
+.pack{width:100%;display:flex;align-items:center;gap:12px;padding:14px;margin-bottom:10px;border-radius:16px;background:var(--plum-3);text-align:left}
+.pack .c{flex:1}
+.pack .c b{display:block;font-size:18px;font-variant-numeric:tabular-nums}
+.pack .c small{color:var(--leaf);font-weight:700}
+.pack .st{background:var(--lemon);color:var(--ink);font-weight:700;border-radius:12px;padding:8px 12px;white-space:nowrap}
+.pack:disabled{opacity:.6}
+nav button{background:var(--plum-2);border-radius:14px;padding:10px 2px;font-size:12px;position:relative}
+nav .dot{right:10px}
+.spin small{display:block;font-family:Rubik,sans-serif;font-size:11px;font-weight:700;margin-top:2px}
+.wheel-wrap{position:relative;width:min(78vw,300px);aspect-ratio:1;margin:8px auto 18px}
+.wheel{width:100%;height:100%;transition:transform 4.2s cubic-bezier(.12,.7,.2,1)}
+.wheel text{font-family:Unbounded,Rubik,sans-serif;font-weight:800;font-size:13px}
+.pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:26px solid var(--lemon);filter:drop-shadow(0 2px 0 #C79A00);z-index:2}
+.hub{position:absolute;inset:40%;border-radius:50%;background:var(--lemon);box-shadow:inset 0 -4px 0 #C79A00;display:grid;place-items:center;font-size:22px}
+.wheel-res{text-align:center;font-weight:700;min-height:24px;margin-bottom:12px;color:var(--gold)}
+nav button .ico{display:block;font-size:22px;margin-bottom:2px}
+nav .dot{position:absolute;top:8px;right:14px;width:9px;height:9px;border-radius:50%;background:var(--cherry)}
+
+/* шторки */
+.sheet-bg{position:fixed;inset:0;background:rgba(20,6,26,.7);z-index:20;display:none}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;max-height:82%;overflow:auto;background:var(--plum-2);border-radius:24px 24px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));z-index:21;transform:translateY(100%);transition:transform .25s}
+.sheet.open{transform:none}
+.sheet h2{font-family:Unbounded,Rubik,sans-serif;font-size:20px;margin:0 0 4px}
+.sheet p.sub{color:var(--muted);margin:0 0 16px;font-size:14px}
+.close{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;background:var(--plum-3);font-size:18px}
+.days{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.day{background:var(--plum-3);border-radius:12px;padding:10px 4px;text-align:center;font-size:12px;color:var(--muted)}
+.day b{display:block;color:var(--text);font-size:15px;margin-top:2px}
+.day.done{background:var(--leaf);color:var(--ink)}.day.done b{color:var(--ink)}
+.day.today{outline:2px solid var(--lemon)}
+.day.big{grid-column:span 2}
+.cta{width:100%;height:52px;border-radius:16px;background:var(--lemon);color:var(--ink);font-weight:700;font-size:16px}
+.cta:disabled{background:var(--plum-3);color:var(--muted)}
+.row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--plum-3)}
+.row:last-child{border-bottom:0}
+.row .ic{width:44px;height:44px;border-radius:12px;background:var(--plum-3);display:grid;place-items:center;font-size:22px;flex:none}
+.row.locked .ic{filter:grayscale(1);opacity:.5}
+.row .t{flex:1;min-width:0}
+.row .t b{display:block}
+.row .t small{color:var(--muted)}
+.row .r{font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap}
+.row.got .r{color:var(--leaf)}
+.pay{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--plum-3)}
+.pay .sy{font-size:28px;display:flex;gap:2px}
+.pay .sy svg{width:28px;height:28px}
+.pay .x{margin-left:auto;font-weight:700;color:var(--gold)}
+.note{font-size:13px;color:var(--muted);margin-top:14px;line-height:1.5}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{flex:1;padding:8px;border-radius:10px;background:var(--plum-3);font-size:14px}
+.tabs button.on{background:var(--lemon);color:var(--ink);font-weight:700}
+
+/* тосты */
+.toast{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top,0px));transform:translate(-50%,-140%);background:var(--leaf);color:var(--ink);font-weight:700;padding:10px 16px;border-radius:14px;z-index:30;transition:transform .3s;max-width:90%;text-align:center}
+.toast.show{transform:translate(-50%,0)}
+
+@media (prefers-reduced-motion:reduce){.cell.hit{animation:none}.sheet,.toast{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <button class="who-btn" data-open="profile" aria-label="Профиль" data-i18n-aria="profile">
+      <div class="avatar" id="avatar">?</div>
+      <div class="who">
+        <div class="name" id="name"></div>
+        <div class="xp"><span id="lvl">Ур. 1</span><div class="bar"><div class="fill" id="xpfill"></div></div></div>
+      </div>
+    </button>
+    <div class="top-btns"><button class="snd" id="snd" aria-label="Звук" data-i18n-aria="sound">🔊</button><button class="snd" data-open="settings" aria-label="Настройки" data-i18n-aria="settings">⚙️</button></div>
+  </header>
+
+  <h1><span class="f">Fruit</span> <span class="s">Spin</span></h1>
+
+  <div class="balance" id="balance"><span class="coin"></span><span class="lbl" data-i18n="balance">Баланс</span><span class="num" id="coins">0</span><button class="test" id="testCoins" hidden>+10 000</button></div>
+
+  <div class="machine">
+    <div class="window" id="window">
+      <svg class="lines" id="lines"></svg>
+    </div>
+  </div>
+
+  <div class="msg" id="msg" aria-live="polite" data-i18n="msg.start">Собери три одинаковых фрукта в один ряд</div>
+
+  <div class="mode" role="radiogroup" aria-label="Количество барабанов" data-i18n-aria="reelsAria">
+    <button role="radio" data-reels="3" data-i18n="reels3">3 барабана</button>
+    <button role="radio" data-reels="4" data-i18n="reels4">4 барабана</button>
+  </div>
+  <div class="mode" role="radiogroup" aria-label="Выигрышные линии" data-i18n-aria="linesAria">
+    <button role="radio" data-mode="1"><svg viewBox="0 0 30 18"><polyline points="3,9 27,9"/></svg><span data-i18n="mode1">Прямые</span></button>
+    <button role="radio" data-mode="2"><svg viewBox="0 0 30 18"><polyline points="3,9 27,9"/><polyline points="3,15 15,3 27,15"/></svg><span data-i18n="mode2">Прямые + изгиб</span></button>
+  </div>
+
+  <div class="controls">
+    <div class="bet">
+      <button id="betDown" aria-label="Уменьшить ставку" data-i18n-aria="betDown">−</button>
+      <div class="val"><b id="bet">10</b><small data-i18n="betLabel">ставка за спин</small></div>
+      <button id="betUp" aria-label="Увеличить ставку" data-i18n-aria="betUp">+</button>
+    </div>
+    <button class="spin" id="spin">КРУТИТЬ</button>
+  </div>
+  <div class="hint" id="hint"></div>
+
+  <nav>
+    <button data-open="deposit"><span class="ico">⭐</span><span data-i18n="nav.deposit">Пополнить</span></button>
+    <button data-open="wheel"><span class="ico">🎡</span><span data-i18n="nav.wheel">Колесо</span><span class="dot" id="wheelDot" hidden></span></button>
+    <button data-open="daily"><span class="ico">🎁</span><span data-i18n="nav.daily">Бонус</span><span class="dot" id="dailyDot" hidden></span></button>
+    <button data-open="awards"><span class="ico">🏆</span><span data-i18n="nav.awards">Награды</span></button>
+    <button data-open="info"><span class="ico">📜</span><span data-i18n="nav.info">Выплаты</span></button>
+  </nav>
+</div>
+
+<div class="sheet-bg" id="sheetBg"></div>
+
+<section class="sheet" id="sheet-daily" role="dialog" aria-label="Ежедневный бонус">
+  <button class="close" data-close aria-label="Закрыть" data-i18n-aria="close">✕</button>
+  <h2 data-i18n="daily.title">Ежедневный бонус</h2>
+  <p class="sub" data-i18n="daily.sub"></p>
+  <div class="days" id="days"></div>
+  <button class="cta" id="claim">Забрать</button>
+</section>
+
+<section class="sheet" id="sheet-awards" role="dialog" aria-label="Награды">
+  <button class="close" data-close aria-label="Закрыть" data-i18n-aria="close">✕</button>
+  <h2 data-i18n="nav.awards">Награды</h2>
+  <div class="tabs"><button class="on" data-tab="ach" data-i18n="tab.ach">Достижения</button><button data-tab="top" data-i18n="tab.top">Рейтинг</button></div>
+  <div id="tab-ach"></div>
+  <div id="tab-top" hidden></div>
+</section>
+
+<section class="sheet" id="sheet-profile" role="dialog" aria-label="Профиль">
+  <button class="close" data-close aria-label="Закрыть" data-i18n-aria="close">✕</button>
+  <h2 data-i18n="profile">Профиль</h2>
+  <div class="pf-photo">
+    <div class="avatar" id="pfAvatar">?</div>
+    <button class="small" id="pfPhotoBtn" data-i18n="pf.photo">Загрузить фото</button>
+    <input type="file" accept="image/*" id="pfFile" hidden>
+  </div>
+  <label class="field"><span data-i18n="pf.nick">Ник</span><input id="pfNick" maxlength="20" autocomplete="nickname" placeholder="" data-i18n-ph="pf.nickPh"></label>
+  <label class="field"><span data-i18n="pf.email">Почта</span><input id="pfEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@mail.com"></label>
+  <div class="field"><span data-i18n="pf.phone">Телефон</span>
+    <div class="phone-row"><input id="pfPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+380"><button class="small" id="pfPhoneTg" data-i18n="pf.fromTg">Из Telegram</button></div>
+  </div>
+  <label class="field"><span data-i18n="pf.wallet">Мой кошелёк</span><input id="pfWallet" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="" data-i18n-ph="pf.walletPh"></label>
+  <p class="err" id="pfErr" aria-live="polite"></p>
+  <button class="cta" id="pfSave" data-i18n="save">Сохранить</button>
+</section>
+
+<section class="sheet" id="sheet-deposit" role="dialog" aria-label="Пополнить баланс">
+  <button class="close" data-close aria-label="Закрыть" data-i18n-aria="close">✕</button>
+  <h2 data-i18n="dep.title">Пополнить баланс</h2>
+  <p class="sub" data-i18n="dep.sub"></p>
+  <div id="packs"></div>
+  <p class="note" data-i18n="noCash"></p>
+</section>
+
+<section class="sheet" id="sheet-wheel" role="dialog" aria-label="Колесо фортуны">
+  <button class="close" data-close aria-label="Закрыть" data-i18n-aria="close">✕</button>
+  <h2 data-i18n="wheel.title">Колесо фортуны</h2>
+  <p class="sub" id="wheelSub"></p>
+  <div class="wheel-wrap"><div class="pointer"></div><svg class="wheel" id="wheel" viewBox="-100 -100 200 200"></svg><div class="hub">🍒</div></div>
+  <div class="wheel-res" id="wheelRes" aria-live="polite"></div>
+  <button class="cta" id="wheelBtn"></button>
+</section>
+
+<section class="sheet" id="sheet-settings" role="dialog" aria-label="Настройки" data-i18n-aria="settings">
+  <button class="close" data-close aria-label="Закрыть" data-i18n-aria="close">✕</button>
+  <h2 data-i18n="settings">Настройки</h2>
+  <label class="field"><span data-i18n="set.lang">Язык</span>
+    <select id="setLang"><option value="en">English</option><option value="ru">Русский</option><option value="uk">Українська</option></select>
+  </label>
+  <div class="field"><span data-i18n="set.theme">Тема</span>
+    <div class="mode theme-pick" role="radiogroup" data-i18n-aria="set.theme" aria-label="Тема">
+      <button role="radio" data-theme-pick="default"><span class="sw" style="background:#2A1233"></span><span data-i18n="theme.default">Фирменная</span></button>
+      <button role="radio" data-theme-pick="dark"><span class="sw" style="background:#141217"></span><span data-i18n="theme.dark">Тёмная</span></button>
+      <button role="radio" data-theme-pick="light"><span class="sw" style="background:#FBF4E8"></span><span data-i18n="theme.light">Светлая</span></button>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="sheet-info" role="dialog" aria-label="Выплаты">
+  <button class="close" data-close aria-label="Закрыть" data-i18n-aria="close">✕</button>
+  <h2 data-i18n="nav.info">Выплаты</h2>
+  <p class="sub" data-i18n="info.sub"></p>
+  <div id="paytable"></div>
+  <p class="note" data-i18n-html="info.note"></p>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- настройки ---------- */
+const CONFIG = {
+  // URL сервера рейтинга. Пусто: рейтинг показывает только текущего игрока.
+  // GET  {url}?limit=20 -> [{name, score}]   POST {url} {initData, score}
+  leaderboardUrl: '',
+  // адрес сервера бота (worker.js) для оплаты звёздами, например https://fruit-spin.имя.workers.dev
+  apiUrl: '',
+  startCoins: 1000,
+  // ТЕСТ: кнопка «+10 000» у баланса. Перед запуском для игроков поставить false.
+  testMode: true
+};
+
+const PLUM_SVG = '<svg viewBox="0 0 64 64" aria-label="слива"><defs><radialGradient id="pg" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#B58AD6"/><stop offset=".45" stop-color="#7A3FA8"/><stop offset="1" stop-color="#3E1660"/></radialGradient></defs><path d="M33 10c3-5 9-7 14-6-2 5-7 8-13 8z" fill="#3BB273"/><path d="M32 13c0-3 1-6 3-8" stroke="#6B4423" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="32" cy="38" rx="21" ry="23" fill="url(#pg)"/><path d="M32 16c-4 8-4 30 0 44" stroke="#3E1660" stroke-width="2" fill="none" opacity=".5"/><ellipse cx="24" cy="28" rx="5" ry="7" fill="#fff" opacity=".25"/></svg>';
+
+const SEVEN_SVG = '<svg viewBox="0 0 64 64" aria-label="семёрка"><text x="32" y="55" text-anchor="middle" font-family="Unbounded,Rubik,Arial Black,sans-serif" font-weight="800" font-size="60" fill="#E3263E" stroke="#FFD23F" stroke-width="5" paint-order="stroke" stroke-linejoin="round">7</text></svg>';
+
+// вес = частота появления, pay = множитель доли ставки за 3 в линию
+const SYMS = [
+  // любой выигрыш больше ставки: самая малая выплата (вишни с изгибом) = 1,16 ставки
+  {id:'cherry', e:'🍒', name:'Вишня',  w:22, pay:26},
+  {id:'lemon',  e:'🍋', name:'Лимон',  w:20, pay:27},
+  {id:'orange', e:'🍊', name:'Апельсин', w:18, pay:29},
+  {id:'banana', e:'🍌', name:'Банан',  w:16, pay:31},
+  {id:'plum',   svg:PLUM_SVG, name:'Слива', w:14, pay:36},
+  {id:'melon',  e:'🍉', name:'Арбуз',  w:10, pay:48},
+  {id:'seven',  svg:SEVEN_SVG, name:'Семёрка', w:4, pay:480}  // джекпот: ×10 от арбуза
+];
+const MULTS = [{x:3,p:.02},{x:2,p:.08}]; // шанс множителя на выигрыш
+const ROWS = 3;
+const BENT_K = 0.4;    // доля выплаты для линии с изгибом
+const MODE1_BOOST = 3; // во сколько раз приз в режиме «Прямые» больше, чем в «Прямые + изгиб»
+// множитель приза по длине линии [3 подряд, 4 подряд, 5 подряд] для каждого числа барабанов
+const LEN_MULT = {3:[1], 4:[0.75, 2.2]};
+const lenMult = len => LEN_MULT[S.reels][len-3];
+const costAt = i => BETS[i];
+const modePay = () => S.mode===2 ? 1/MODE1_BOOST : 1; // множитель выплат текущего режима
+const spinCost = () => costAt(S.betIdx);
+// если спин дороже баланса, ставим максимальную ставку, которую баланс покрывает
+function fitBet(){
+  if (S.freeSpins > 0 || spinning || spinCost() <= S.coins || S.betIdx === 0) return;
+  const was = S.betIdx;
+  while (S.betIdx > 0 && spinCost() > S.coins) S.betIdx--;
+  if (S.betIdx !== was){ toast(t('betLowered',{bet:fmt(BETS[S.betIdx])})); save(); }
+}
+const BETS = [10,20,50,100,200,500,1000];
+const DAILY = [100,150,200,300,400,500,1000];
+const xpNeed = l => Math.round(300 * Math.pow(l, 1.5));
+const maxBetIdx = l => Math.min(BETS.length-1, l+1);
+
+const ACH = [
+  {id:'first',  ic:'🍒', r:100,  ok:s=>s.wins>=1},
+  {id:'spin100',ic:'🎰', r:300,  ok:s=>s.spins>=100},
+  {id:'streak3',ic:'🔥', r:250,  ok:s=>s.maxStreak>=3},
+  {id:'melon',  ic:'🍉', r:1000, ok:s=>s.melons>=1},
+  {id:'seven',  ic:'7️⃣', r:5000, ok:s=>(s.sevens||0)>=1},
+  {id:'lvl5',   ic:'⭐', r:500,  ok:s=>s.level>=5},
+  {id:'rich',   ic:'💰', r:1000, ok:s=>s.coins>=10000},
+  {id:'week',   ic:'📅', r:700,  ok:s=>s.dailyDay>=7}
+];
+
+/* ---------- Telegram ---------- */
+const tg = window.Telegram && Telegram.WebApp;
+const user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+if (tg) {
+  tg.ready(); tg.expand();
+  try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch(e){}
+}
+const haptic = (t, kind) => { try { tg.HapticFeedback[t](kind); } catch(e){} };
+const cloud = tg && tg.CloudStorage && tg.isVersionAtLeast && tg.isVersionAtLeast('6.9') ? tg.CloudStorage : null;
+const KEY = 'fruitspin_v1';
+
+/* ---------- состояние ---------- */
+let S = {coins:CONFIG.startCoins, xp:0, level:1, spins:0, wins:0, streak:0, maxStreak:0, best:0, melons:0,
+         betIdx:0, mode:1, reels:3, sound:true, lastDaily:'', dailyDay:0, ach:{}, lastRefill:0, lastWheel:'', freeSpins:0, lang:'', theme:'default'};
+let saveTimer;
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const v = JSON.stringify(S);
+    if (cloud) cloud.setItem(KEY, v, () => {});
+    try { localStorage.setItem(KEY, v); } catch(e){}
+  }, 300);
+}
+function load(cb){
+  const apply = v => { try { if (v) S = Object.assign(S, JSON.parse(v)); } catch(e){} cb(); };
+  if (cloud) cloud.getItem(KEY, (err, v) => apply(!err && v ? v : (()=>{try{return localStorage.getItem(KEY)}catch(e){return null}})()));
+  else { let v=null; try{ v = localStorage.getItem(KEY); }catch(e){} apply(v); }
+}
+
+/* ---------- языки ---------- */
+const I18N = {
+ru: {
+  coinForms:['монета','монеты','монет'], spinForms:['спин','спина','спинов'],
+  profile:'Профиль', player:'Игрок', lvl:'Ур. {n}', sound:'Звук', settings:'Настройки', close:'Закрыть', save:'Сохранить',
+  balance:'Баланс', 'msg.start':'Собери три одинаковых фрукта в один ряд',
+  reelsAria:'Количество барабанов', reels3:'3 барабана', reels4:'4 барабана',
+  linesAria:'Выигрышные линии', mode1:'Прямые', mode2:'Прямые + изгиб',
+  betDown:'Уменьшить ставку', betUp:'Увеличить ставку', betLabel:'ставка за спин',
+  spin:'КРУТИТЬ', spinFree:'бесплатно: {n}',
+  'nav.deposit':'Пополнить', 'nav.wheel':'Колесо', 'nav.daily':'Бонус', 'nav.awards':'Награды', 'nav.info':'Выплаты',
+  'daily.title':'Ежедневный бонус', 'daily.sub':'Заходи каждый день подряд, и бонус растёт. Пропуск дня начинает серию заново.',
+  'daily.day':'День {n}', 'daily.claim':'Забрать {coins}', 'daily.tomorrow':'Возвращайся завтра',
+  'tab.ach':'Достижения', 'tab.top':'Рейтинг',
+  'pf.photo':'Загрузить фото', 'pf.nick':'Ник', 'pf.nickPh':'Как тебя показывать в рейтинге', 'pf.email':'Почта', 'pf.phone':'Телефон',
+  'pf.fromTg':'Из Telegram', 'pf.wallet':'Мой кошелёк', 'pf.walletPh':'Адрес TON-кошелька или ссылка',
+  'pf.errFile':'Этот файл не открывается. Выбери фото в формате JPG или PNG',
+  'pf.phoneSent':'Номер отправлен боту. Если поле пустое, впиши номер вручную',
+  'pf.errNick':'Ник: от 2 до 20 символов, буквы, цифры, пробел, точка, дефис или _',
+  'pf.errEmail':'Проверь почту: должно быть как name@mail.com',
+  'pf.errPhone':'Проверь телефон: от 10 до 15 цифр, можно с +',
+  'pf.errWallet':'Проверь кошелёк: вставь адрес TON (начинается с UQ или EQ) или ссылку, начинающуюся с https://',
+  'pf.saved':'Профиль сохранён',
+  'dep.title':'Пополнить баланс', 'dep.sub':'Оплата звёздами Telegram. Монеты приходят сразу после оплаты.',
+  noCash:'Монеты игровые: их нельзя вывести или обменять на деньги.',
+  'pack.bonus':'{b} бонус', 'pay.off':'Оплата ещё не подключена', 'pay.tg':'Открой игру в Telegram, чтобы оплатить',
+  'pay.ok':'+{coins} на балансе', 'pay.fail':'Оплата не прошла, звёзды не списаны. Попробуй ещё раз',
+  'pay.err':'Не удалось открыть оплату. Проверь интернет и попробуй ещё раз',
+  'wheel.title':'Колесо фортуны', 'wheel.sub':'Одно бесплатное вращение в день. Приз: монеты или бесплатные вращения слота по ставке {bet}.',
+  'wheel.btn':'Крутить колесо', 'wheel.tomorrow':'Следующее вращение завтра', 'wheel.resFree':'Бесплатные вращения: {n}, ставка {bet}',
+  'info.sub':'Режим «Прямые»: выигрыш, когда в одном ряду стоят три одинаковых фрукта. Режим «Прямые + изгиб» засчитывает и линии, которые переходят в соседний ряд: уголком, ступенькой или по диагонали. Они платят меньше прямых. Спин в обоих режимах стоит одинаково, но в режиме «Прямые» каждый приз в 3 раза больше. На 4 барабанах линия считается от левого края: 3 одинаковых фрукта подряд уже выигрыш, 4 по прямой платят больше. Линия с изгибом платит одинаково при любой длине. Суммы ниже указаны для текущей ставки.',
+  'info.note':'Иногда выигрыш получает множитель ×2 или ×3.<br>С каждым уровнем открываются более высокие ставки и приходит награда монетами.<br>Монеты игровые: их нельзя вывести или обменять на деньги.',
+  'pay.bent':'с изгибом {v}', 'pay.inRow':'{n} подряд',
+  betLowered:'Ставка снижена до {bet}: не хватает монет',
+  'hint.free':'Бесплатных вращений: <b>{n}</b>, ставка <b>{bet}</b>. Монеты не списываются',
+  'hint.cost':'Спин стоит <b>{cost}</b>. Джекпот {sevens} в ряд: <b>{jp}</b>', 'hint.bent':', с изгибом: <b>{v}</b>',
+  'msg.spinning':'Крутим…', 'msg.jackpot':'ДЖЕКПОТ! ', 'msg.almost':'Почти! Крути ещё',
+  'toast.level':'Уровень {n}! +{coins}', 'toast.levelBet':', ставка до {bet}',
+  'out.daily':'Не хватает монет: забери ежедневный бонус', 'out.gift':'Держи {coins}, чтобы продолжить',
+  'out.lower':'Не хватает монет: уменьши ставку', 'out.wait':'Новые монеты через {m} мин',
+  'ach.got':'Получено', 'top.me':'Уровень {n}, лучший выигрыш {best}', 'top.alone':'Пока в рейтинге только ты.',
+  'top.loading':'Загружаем рейтинг…', 'top.yours':'Твой результат', 'top.err':'Рейтинг не загрузился. Проверь интернет и открой вкладку снова.',
+  'set.lang':'Язык', 'set.theme':'Тема', 'theme.default':'Фирменная', 'theme.dark':'Тёмная', 'theme.light':'Светлая',
+  'ach.first.t':'Первый сок', 'ach.first.d':'Выиграй впервые',
+  'ach.spin100.t':'Сто вращений', 'ach.spin100.d':'Сделай 100 вращений',
+  'ach.streak3.t':'Серия', 'ach.streak3.d':'Выиграй 3 раза подряд',
+  'ach.melon.t':'Арбузный ряд', 'ach.melon.d':'Собери три арбуза в линию',
+  'ach.seven.t':'Джекпот', 'ach.seven.d':'Собери три семёрки в линию',
+  'ach.lvl5.t':'Пятый уровень', 'ach.lvl5.d':'Достигни 5 уровня',
+  'ach.rich.t':'Копилка', 'ach.rich.d':'Накопи {n} монет',
+  'ach.week.t':'Неделя подряд', 'ach.week.d':'Забери бонус 7 дней подряд'
+},
+uk: {
+  coinForms:['монета','монети','монет'], spinForms:['спін','спіни','спінів'],
+  profile:'Профіль', player:'Гравець', lvl:'Рів. {n}', sound:'Звук', settings:'Налаштування', close:'Закрити', save:'Зберегти',
+  balance:'Баланс', 'msg.start':'Збери три однакові фрукти в один ряд',
+  reelsAria:'Кількість барабанів', reels3:'3 барабани', reels4:'4 барабани',
+  linesAria:'Виграшні лінії', mode1:'Прямі', mode2:'Прямі + вигин',
+  betDown:'Зменшити ставку', betUp:'Збільшити ставку', betLabel:'ставка за спін',
+  spin:'КРУТИТИ', spinFree:'безкоштовно: {n}',
+  'nav.deposit':'Поповнити', 'nav.wheel':'Колесо', 'nav.daily':'Бонус', 'nav.awards':'Нагороди', 'nav.info':'Виплати',
+  'daily.title':'Щоденний бонус', 'daily.sub':'Заходь щодня поспіль, і бонус зростає. Пропуск дня починає серію заново.',
+  'daily.day':'День {n}', 'daily.claim':'Забрати {coins}', 'daily.tomorrow':'Повертайся завтра',
+  'tab.ach':'Досягнення', 'tab.top':'Рейтинг',
+  'pf.photo':'Завантажити фото', 'pf.nick':'Нік', 'pf.nickPh':'Як тебе показувати в рейтингу', 'pf.email':'Пошта', 'pf.phone':'Телефон',
+  'pf.fromTg':'З Telegram', 'pf.wallet':'Мій гаманець', 'pf.walletPh':'Адреса TON-гаманця або посилання',
+  'pf.errFile':'Цей файл не відкривається. Обери фото у форматі JPG або PNG',
+  'pf.phoneSent':'Номер надіслано боту. Якщо поле порожнє, впиши номер вручну',
+  'pf.errNick':'Нік: від 2 до 20 символів, літери, цифри, пробіл, крапка, дефіс або _',
+  'pf.errEmail':'Перевір пошту: має бути як name@mail.com',
+  'pf.errPhone':'Перевір телефон: від 10 до 15 цифр, можна з +',
+  'pf.errWallet':'Перевір гаманець: встав адресу TON (починається з UQ або EQ) або посилання, що починається з https://',
+  'pf.saved':'Профіль збережено',
+  'dep.title':'Поповнити баланс', 'dep.sub':'Оплата зірками Telegram. Монети надходять одразу після оплати.',
+  noCash:'Монети ігрові: їх не можна вивести або обміняти на гроші.',
+  'pack.bonus':'{b} бонус', 'pay.off':'Оплату ще не підключено', 'pay.tg':'Відкрий гру в Telegram, щоб оплатити',
+  'pay.ok':'+{coins} на балансі', 'pay.fail':'Оплата не пройшла, зірки не списано. Спробуй ще раз',
+  'pay.err':'Не вдалося відкрити оплату. Перевір інтернет і спробуй ще раз',
+  'wheel.title':'Колесо фортуни', 'wheel.sub':'Одне безкоштовне обертання на день. Приз: монети або безкоштовні обертання слота зі ставкою {bet}.',
+  'wheel.btn':'Крутити колесо', 'wheel.tomorrow':'Наступне обертання завтра', 'wheel.resFree':'Безкоштовні обертання: {n}, ставка {bet}',
+  'info.sub':'Режим «Прямі»: виграш, коли в одному ряду стоять три однакові фрукти. Режим «Прямі + вигин» зараховує й лінії, що переходять у сусідній ряд: кутом, сходинкою або по діагоналі. Вони платять менше за прямі. Спін в обох режимах коштує однаково, але в режимі «Прямі» кожен приз у 3 рази більший. На 4 барабанах лінія рахується від лівого краю: 3 однакові фрукти поспіль уже виграш, 4 по прямій платять більше. Лінія з вигином платить однаково за будь-якої довжини. Суми нижче вказано для поточної ставки.',
+  'info.note':'Іноді виграш отримує множник ×2 або ×3.<br>З кожним рівнем відкриваються вищі ставки й приходить нагорода монетами.<br>Монети ігрові: їх не можна вивести або обміняти на гроші.',
+  'pay.bent':'з вигином {v}', 'pay.inRow':'{n} поспіль',
+  betLowered:'Ставку знижено до {bet}: бракує монет',
+  'hint.free':'Безкоштовних обертань: <b>{n}</b>, ставка <b>{bet}</b>. Монети не списуються',
+  'hint.cost':'Спін коштує <b>{cost}</b>. Джекпот {sevens} у ряд: <b>{jp}</b>', 'hint.bent':', з вигином: <b>{v}</b>',
+  'msg.spinning':'Крутимо…', 'msg.jackpot':'ДЖЕКПОТ! ', 'msg.almost':'Майже! Крути ще',
+  'toast.level':'Рівень {n}! +{coins}', 'toast.levelBet':', ставка до {bet}',
+  'out.daily':'Бракує монет: забери щоденний бонус', 'out.gift':'Тримай {coins}, щоб продовжити',
+  'out.lower':'Бракує монет: зменш ставку', 'out.wait':'Нові монети через {m} хв',
+  'ach.got':'Отримано', 'top.me':'Рівень {n}, найкращий виграш {best}', 'top.alone':'Поки в рейтингу тільки ти.',
+  'top.loading':'Завантажуємо рейтинг…', 'top.yours':'Твій результат', 'top.err':'Рейтинг не завантажився. Перевір інтернет і відкрий вкладку знову.',
+  'set.lang':'Мова', 'set.theme':'Тема', 'theme.default':'Фірмова', 'theme.dark':'Темна', 'theme.light':'Світла',
+  'ach.first.t':'Перший сік', 'ach.first.d':'Виграй уперше',
+  'ach.spin100.t':'Сто обертань', 'ach.spin100.d':'Зроби 100 обертань',
+  'ach.streak3.t':'Серія', 'ach.streak3.d':'Виграй 3 рази поспіль',
+  'ach.melon.t':'Кавуновий ряд', 'ach.melon.d':'Збери три кавуни в лінію',
+  'ach.seven.t':'Джекпот', 'ach.seven.d':'Збери три сімки в лінію',
+  'ach.lvl5.t':'П’ятий рівень', 'ach.lvl5.d':'Досягни 5 рівня',
+  'ach.rich.t':'Скарбничка', 'ach.rich.d':'Накопич {n} монет',
+  'ach.week.t':'Тиждень поспіль', 'ach.week.d':'Забери бонус 7 днів поспіль'
+},
+en: {
+  coinForms:['coin','coins'], spinForms:['spin','spins'],
+  profile:'Profile', player:'Player', lvl:'Lv {n}', sound:'Sound', settings:'Settings', close:'Close', save:'Save',
+  balance:'Balance', 'msg.start':'Line up three matching fruits in a row',
+  reelsAria:'Number of reels', reels3:'3 reels', reels4:'4 reels',
+  linesAria:'Winning lines', mode1:'Straight', mode2:'Straight + bent',
+  betDown:'Lower bet', betUp:'Raise bet', betLabel:'bet per spin',
+  spin:'SPIN', spinFree:'free: {n}',
+  'nav.deposit':'Top up', 'nav.wheel':'Wheel', 'nav.daily':'Bonus', 'nav.awards':'Awards', 'nav.info':'Payouts',
+  'daily.title':'Daily bonus', 'daily.sub':'Come back every day in a row and the bonus grows. Missing a day restarts the streak.',
+  'daily.day':'Day {n}', 'daily.claim':'Claim {coins}', 'daily.tomorrow':'Come back tomorrow',
+  'tab.ach':'Achievements', 'tab.top':'Leaderboard',
+  'pf.photo':'Upload photo', 'pf.nick':'Nickname', 'pf.nickPh':'How to show you on the leaderboard', 'pf.email':'Email', 'pf.phone':'Phone',
+  'pf.fromTg':'From Telegram', 'pf.wallet':'My wallet', 'pf.walletPh':'TON wallet address or link',
+  'pf.errFile':'This file won’t open. Choose a JPG or PNG photo',
+  'pf.phoneSent':'Number sent to the bot. If the field is empty, type it in',
+  'pf.errNick':'Nickname: 2 to 20 characters, letters, digits, space, dot, hyphen or _',
+  'pf.errEmail':'Check your email: it should look like name@mail.com',
+  'pf.errPhone':'Check your phone: 10 to 15 digits, + allowed',
+  'pf.errWallet':'Check your wallet: paste a TON address (starts with UQ or EQ) or a link starting with https://',
+  'pf.saved':'Profile saved',
+  'dep.title':'Top up balance', 'dep.sub':'Pay with Telegram Stars. Coins arrive right after payment.',
+  noCash:'Coins are for play only: they can’t be withdrawn or exchanged for money.',
+  'pack.bonus':'{b} bonus', 'pay.off':'Payments aren’t connected yet', 'pay.tg':'Open the game in Telegram to pay',
+  'pay.ok':'+{coins} added to your balance', 'pay.fail':'Payment failed and no Stars were charged. Try again',
+  'pay.err':'Couldn’t open payment. Check your connection and try again',
+  'wheel.title':'Wheel of fortune', 'wheel.sub':'One free spin a day. Prize: coins or free slot spins at a bet of {bet}.',
+  'wheel.btn':'Spin the wheel', 'wheel.tomorrow':'Next spin tomorrow', 'wheel.resFree':'Free spins: {n}, bet {bet}',
+  'info.sub':'Straight mode: you win when three matching fruits line up in one row. Straight + bent also counts lines that step into a neighboring row: as a corner, a step or a diagonal. They pay less than straight lines. A spin costs the same in both modes, but every prize in Straight mode is 3 times bigger. With 4 reels a line counts from the left edge: 3 matching fruits in a row already win, and 4 in a straight line pay more. A bent line pays the same at any length. Amounts below are for your current bet.',
+  'info.note':'Sometimes a win gets a ×2 or ×3 multiplier.<br>Each level unlocks higher bets and gives you a coin reward.<br>Coins are for play only: they can’t be withdrawn or exchanged for money.',
+  'pay.bent':'bent {v}', 'pay.inRow':'{n} in a row',
+  betLowered:'Bet lowered to {bet}: not enough coins',
+  'hint.free':'Free spins: <b>{n}</b>, bet <b>{bet}</b>. No coins are taken',
+  'hint.cost':'Spin costs <b>{cost}</b>. Jackpot {sevens} in a row: <b>{jp}</b>', 'hint.bent':', bent: <b>{v}</b>',
+  'msg.spinning':'Spinning…', 'msg.jackpot':'JACKPOT! ', 'msg.almost':'So close! Spin again',
+  'toast.level':'Level {n}! +{coins}', 'toast.levelBet':', bets up to {bet}',
+  'out.daily':'Not enough coins: claim your daily bonus', 'out.gift':'Here are {coins} to keep going',
+  'out.lower':'Not enough coins: lower your bet', 'out.wait':'New coins in {m} min',
+  'ach.got':'Earned', 'top.me':'Level {n}, best win {best}', 'top.alone':'You’re the only one on the leaderboard so far.',
+  'top.loading':'Loading leaderboard…', 'top.yours':'Your result', 'top.err':'The leaderboard didn’t load. Check your connection and open the tab again.',
+  'set.lang':'Language', 'set.theme':'Theme', 'theme.default':'Signature', 'theme.dark':'Dark', 'theme.light':'Light',
+  'ach.first.t':'First juice', 'ach.first.d':'Win for the first time',
+  'ach.spin100.t':'Hundred spins', 'ach.spin100.d':'Make 100 spins',
+  'ach.streak3.t':'Streak', 'ach.streak3.d':'Win 3 times in a row',
+  'ach.melon.t':'Melon row', 'ach.melon.d':'Line up three watermelons',
+  'ach.seven.t':'Jackpot', 'ach.seven.d':'Line up three sevens',
+  'ach.lvl5.t':'Level five', 'ach.lvl5.d':'Reach level 5',
+  'ach.rich.t':'Piggy bank', 'ach.rich.d':'Save up {n} coins',
+  'ach.week.t':'Week streak', 'ach.week.d':'Claim the bonus 7 days in a row'
+}};
+const LOCALES = {ru:'ru-RU', uk:'uk-UA', en:'en-US'};
+const L = () => I18N[S.lang] || I18N.en;
+function t(key, vars){
+  let str = L()[key] ?? I18N.ru[key] ?? key;
+  if (vars) for (const k in vars) str = str.split('{'+k+'}').join(vars[k]);
+  return str;
+}
+function plural(n, forms){
+  if (forms.length === 2) return n === 1 ? forms[0] : forms[1];
+  const c = new Intl.PluralRules(S.lang).select(n);
+  return c === 'one' ? forms[0] : c === 'few' ? forms[1] : forms[2];
+}
+const coinsText = n => `${fmt(n)} ${plural(n, L().coinForms)}`;
+function detectLang(){
+  const code = ((user && user.language_code) || navigator.language || 'en').slice(0,2).toLowerCase();
+  return code === 'uk' ? 'uk' : code === 'ru' ? 'ru' : 'en';
+}
+function applyLang(){
+  document.documentElement.lang = S.lang;
+  document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent = t(el.dataset.i18n));
+  document.querySelectorAll('[data-i18n-html]').forEach(el=>el.innerHTML = t(el.dataset.i18nHtml));
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>el.placeholder = t(el.dataset.i18nPh));
+  document.querySelectorAll('[data-i18n-aria]').forEach(el=>el.setAttribute('aria-label', t(el.dataset.i18nAria)));
+  $('wheelSub').textContent = t('wheel.sub', {bet: FREE_BET});
+  $('setLang').value = S.lang;
+}
+
+/* ---------- темы ---------- */
+const THEME_BG = {default:'#2A1233', dark:'#141217', light:'#FBF4E8'};
+function applyTheme(){
+  const th = THEME_BG[S.theme] ? S.theme : 'default';
+  if (th === 'default') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = th;
+  try { tg && tg.setHeaderColor(THEME_BG[th]); tg && tg.setBackgroundColor(THEME_BG[th]); } catch(e){}
+  document.querySelectorAll('[data-theme-pick]').forEach(b=>{
+    const on = b.dataset.themePick === th; b.classList.toggle('on', on); b.setAttribute('aria-checked', on);
+  });
+}
+
+/* ---------- утилиты ---------- */
+const $ = id => document.getElementById(id);
+const fmt = n => n.toLocaleString(LOCALES[S.lang] || 'en-US');
+const today = () => new Date().toLocaleDateString('sv');
+const yesterday = () => { const d = new Date(); d.setDate(d.getDate()-1); return d.toLocaleDateString('sv'); };
+const totalW = SYMS.reduce((a,s)=>a+s.w,0);
+function rnd(){ let r = Math.random()*totalW; for (const s of SYMS){ if ((r-=s.w)<0) return s; } return SYMS[0]; }
+const symHTML = s => s.svg ? s.svg : s.e;
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- звуки (синтез, без файлов) ---------- */
+let actx;
+function ac(){
+  if (!S.sound) return null;
+  try{
+    if (!actx) actx = new (window.AudioContext||window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+  }catch(e){ return null; }
+  return actx;
+}
+function tone(f1, f2, dur, type, vol, delay=0){
+  const a = ac(); if (!a) return;
+  const t = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(f1, t);
+  if (f2 !== f1) o.frequency.exponentialRampToValueAtTime(f2, t+dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t+dur+0.02);
+}
+let noiseBuf;
+// короткий щелчок шума через полосовой фильтр
+function click(freq, q, dur, vol, delay=0){
+  const a = ac(); if (!a) return;
+  if (!noiseBuf){
+    noiseBuf = a.createBuffer(1, a.sampleRate*0.5, a.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  }
+  const t = a.currentTime + delay, src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  src.buffer = noiseBuf; f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  src.connect(f).connect(g).connect(a.destination);
+  src.start(t, Math.random()*0.4); src.stop(t+dur+0.01);
+}
+// как клавиша клавиатуры iPhone: сухой, очень короткий «тик»
+const sndPress = () => { click(4200, 1.2, .018, .9); tone(1800, 1200, .012, 'sine', .08); };
+// барабан: мягкая механическая трещотка, как у классического однорукого бандита
+const sndTick  = () => click(1300 + Math.random()*300, 4, .035, .35);
+// остановка барабана: глухой «клак»
+const sndStop  = () => { click(700, 2, .07, .7); tone(140, 70, .12, 'sine', .35); };
+let tickTimer = null, tickGap = 60;
+function startTicks(){ stopTicks(); tickGap = 60; const loop = () => { sndTick(); tickTimer = setTimeout(loop, tickGap); }; loop(); }
+function slowTicks(){ tickGap += 35; }   // после остановки каждого барабана трещотка замедляется
+function stopTicks(){ clearTimeout(tickTimer); tickTimer = null; }
+
+function delta(n){
+  if (!n) return;
+  const d = document.createElement('span');
+  d.className = 'delta ' + (n<0?'minus':'plus');
+  d.textContent = (n<0?'−':'+') + fmt(Math.abs(n));
+  $('balance').appendChild(d);
+  setTimeout(()=>d.remove(), 1100);
+}
+function toast(text){
+  const t = $('toast'); t.textContent = text; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+let shownCoins = 0;
+function renderCoins(){
+  const from = shownCoins, to = S.coins, t0 = performance.now(), dur = reduced ? 0 : 500;
+  const step = now => {
+    const k = dur ? Math.min(1,(now-t0)/dur) : 1;
+    shownCoins = Math.round(from + (to-from)*k);
+    $('coins').textContent = fmt(shownCoins);
+    if (k<1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+function renderHUD(){
+  renderCoins();
+  $('lvl').textContent = t('lvl',{n:S.level});
+  $('xpfill').style.width = Math.min(100, S.xp / xpNeed(S.level) * 100) + '%';
+  S.betIdx = Math.min(S.betIdx, maxBetIdx(S.level));
+  fitBet();
+  $('bet').textContent = fmt(BETS[S.betIdx]);
+  const b = BETS[S.betIdx];
+  const jp = Math.round(b/ROWS*SYMS.find(x=>x.id==='seven').pay*lenMult(S.reels)*modePay());
+  $('spin').innerHTML = S.freeSpins > 0 ? `${t('spin')}<small>${t('spinFree',{n:S.freeSpins})}</small>` : t('spin');
+  $('wheelDot').hidden = S.lastWheel === today();
+  if (S.freeSpins > 0) $('hint').innerHTML = t('hint.free',{n:S.freeSpins, bet:FREE_BET});
+  else $('hint').innerHTML = t('hint.cost',{cost:fmt(spinCost()), sevens:'7'.repeat(S.reels), jp:fmt(jp)}) +
+    (S.mode===2 ? t('hint.bent',{v:fmt(Math.round(b/ROWS*SYMS.find(x=>x.id==='seven').pay*BENT_K*modePay()))}) : ' ' + plural(jp, L().coinForms));
+  document.querySelectorAll('[data-reels]').forEach(x=>{
+    const on = +x.dataset.reels===S.reels; x.classList.toggle('on',on); x.setAttribute('aria-checked',on); x.disabled = spinning;
+  });
+  document.querySelectorAll('[data-mode]').forEach(x=>{
+    const on = +x.dataset.mode===S.mode; x.classList.toggle('on',on); x.setAttribute('aria-checked',on); x.disabled = spinning;
+  });
+  $('betDown').disabled = S.betIdx===0 || spinning;
+  $('betUp').disabled = S.betIdx>=maxBetIdx(S.level) || spinning || costAt(S.betIdx+1) > S.coins;
+  $('dailyDot').hidden = S.lastDaily === today();
+}
+
+/* ---------- барабаны ---------- */
+let reels = [], grid = [];
+const newGrid = () => Array.from({length:S.reels}, ()=>[rnd(),rnd(),rnd()]);
+function buildReels(){
+  document.documentElement.style.setProperty('--n', S.reels);
+  $('window').querySelectorAll('.reel').forEach(x=>x.remove());
+  for (let c=0;c<S.reels;c++){
+    const d = document.createElement('div'); d.className='reel'; d.innerHTML='<div class="strip"></div>';
+    $('window').insertBefore(d, $('lines'));
+  }
+  reels = [...$('window').querySelectorAll('.reel')];
+  grid = newGrid(); $('lines').innerHTML=''; paintStatic();
+}
+function cellH(){ return reels[0].getBoundingClientRect().height/3; }
+function paintStatic(){
+  reels.forEach((r,c)=>{
+    const st = r.firstElementChild;
+    st.style.transition='none'; st.style.transform='none';
+    st.innerHTML = grid[c].map(s=>`<div class="cell">${symHTML(s)}</div>`).join('');
+  });
+}
+function spinReel(c, finalCol, dur){
+  return new Promise(res=>{
+    const st = reels[c].firstElementChild, h = cellH();
+    const filler = Array.from({length: 14 + c*4}, rnd);
+    const seq = [...finalCol, ...filler, ...grid[c]];
+    st.innerHTML = seq.map(s=>`<div class="cell">${symHTML(s)}</div>`).join('');
+    st.style.transition='none';
+    st.style.transform=`translateY(${-(seq.length-3)*h}px)`;
+    st.offsetHeight;
+    st.style.transition=`transform ${dur}ms cubic-bezier(.15,.75,.3,1.04)`;
+    st.style.transform='translateY(0)';
+    setTimeout(()=>{ haptic('impactOccurred','light'); sndStop(); slowTicks(); res(); }, dur);
+  });
+}
+
+/* ---------- выигрыш ---------- */
+function evaluate(g, bet){
+  // линия идёт от левого края; «Прямые»: только в том же ряду, «с изгибом»: ещё и в соседний ряд.
+  // засчитывается самая длинная цепочка от 3 одинаковых фруктов подряд
+  const lineBet = bet/ROWS, hits = [], N = g.length, moves = S.mode===2 ? [-1,0,1] : [0];
+  let total = 0;
+  for (let r0=0;r0<ROWS;r0++){
+    const sym = g[0][r0];
+    const walk = path => {
+      let ext = false;
+      if (path.length < N) for (const d of moves){
+        const r = path[path.length-1] + d;
+        if (r>=0 && r<ROWS && g[path.length][r].id===sym.id){ ext = true; walk(path.concat(r)); }
+      }
+      if (!ext && path.length >= 3){
+        const bent = path.some(x=>x!==path[0]);
+        // линия с изгибом платит одинаково при любой длине, иначе режим уходит в плюс игроку
+        total += lineBet*sym.pay*(bent ? BENT_K : lenMult(path.length))*modePay();
+        hits.push({rows:path, bent, sym});
+      }
+    };
+    walk([r0]);
+  }
+  return {total: Math.round(total), hits};
+}
+function drawLines(hits){
+  const svg = $('lines'), box = svg.getBoundingClientRect();
+  svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+  // центр конкретной ячейки с фруктом, относительно окна барабанов
+  const pt = (c, row) => {
+    const b = reels[c].firstElementChild.children[row].getBoundingClientRect();
+    return (b.left + b.width/2 - box.left).toFixed(1) + ',' + (b.top + b.height/2 - box.top).toFixed(1);
+  };
+  svg.innerHTML = hits.map(({rows,bent})=>
+    `<polyline class="${bent?'bent':''}" points="${rows.map((row,c)=>pt(c,row)).join(' ')}"/>`).join('');
+  hits.forEach(({rows})=>rows.forEach((row,c)=>reels[c].firstElementChild.children[row].classList.add('hit')));
+}
+
+/* ---------- вращение ---------- */
+let spinning = false;
+async function spin(){
+  if (spinning) return;
+  const free = S.freeSpins > 0;
+  const bet = free ? FREE_BET : BETS[S.betIdx], cost = free ? 0 : spinCost();
+  if (!free && S.coins < cost){ return outOfCoins(); }
+  if (free) S.freeSpins--;
+  spinning = true; $('spin').disabled = true; renderHUD();
+  $('lines').innerHTML=''; $('msg').className='msg'; $('msg').textContent=t('msg.spinning');
+  haptic('impactOccurred','medium'); sndPress(); startTicks();
+  S.coins -= cost; S.spins++; renderCoins(); if (cost) delta(-cost);
+
+  const next = newGrid();
+  const base = reduced ? 250 : 1100, step = reduced ? 80 : (S.reels>3 ? 280 : 380);
+  await Promise.all(next.map((col,c)=>spinReel(c, col, base + c*step)));
+  stopTicks();
+  grid = next; paintStatic();
+
+  const {total, hits} = evaluate(grid, bet);
+  let win = total, mult = 1;
+  if (win>0){
+    const r = Math.random(); let acc=0;
+    for (const m of MULTS){ acc+=m.p; if (r<acc){ mult=m.x; break; } }
+    win *= mult;
+    S.wins++; S.streak++; S.maxStreak=Math.max(S.maxStreak,S.streak); S.best=Math.max(S.best,win);
+    if (hits.some(h=>h.sym.id==='melon')) S.melons++;
+    const jackpot = hits.some(h=>h.sym.id==='seven');
+    if (jackpot) S.sevens = (S.sevens||0) + 1;
+    S.coins += win; delta(win);
+    drawLines(hits);
+    $('msg').className='msg win';
+    $('msg').innerHTML = (jackpot ? t('msg.jackpot') : '') + `+${coinsText(win)}` + (mult>1?`<span class="mult">×${mult}</span>`:'');
+    haptic('notificationOccurred','success');
+  } else {
+    S.streak = 0;
+    $('msg').textContent = t('msg.almost');
+  }
+
+  addXp(bet);
+  checkAch();
+  spinning=false; $('spin').disabled=false;
+  renderHUD(); save(); submitScore();
+}
+function addXp(n){
+  S.xp += n;
+  while (S.xp >= xpNeed(S.level)){
+    S.xp -= xpNeed(S.level); S.level++;
+    const reward = 100*S.level; S.coins += reward;
+    toast(t('toast.level',{n:S.level, coins:coinsText(reward)}) + (maxBetIdx(S.level)>maxBetIdx(S.level-1)? t('toast.levelBet',{bet:fmt(BETS[maxBetIdx(S.level)])}) :''));
+    haptic('notificationOccurred','success');
+  }
+}
+function checkAch(){
+  for (const a of ACH){
+    if (!S.ach[a.id] && a.ok(S)){
+      S.ach[a.id]=1; S.coins+=a.r;
+      setTimeout(()=>toast(`${a.ic} ${t('ach.'+a.id+'.t')}: +${coinsText(a.r)}`), 900);
+    }
+  }
+}
+function outOfCoins(){
+  if (S.lastDaily !== today()){ $('msg').textContent=t('out.daily'); return openSheet('daily'); }
+  if (S.coins < BETS[0] && Date.now()-S.lastRefill > 3600e3){
+    S.lastRefill = Date.now(); S.coins += 200; renderHUD(); save();
+    return toast(t('out.gift',{coins:coinsText(200)}));
+  }
+  if (S.coins >= BETS[0]){ $('msg').textContent = t('out.lower'); return; }
+  const mins = Math.ceil((3600e3-(Date.now()-S.lastRefill))/60000);
+  $('msg').textContent = t('out.wait',{m:mins});
+}
+
+/* ---------- шторки ---------- */
+/* ---------- пополнение звёздами ---------- */
+// цены должны совпадать с PACKS в worker.js: там они проверяются при оплате
+const PACKS = [
+  {id:'p50',  stars:50,  coins:5000},
+  {id:'p100', stars:100, coins:11000, bonus:'+10%'},
+  {id:'p250', stars:250, coins:30000, bonus:'+20%'},
+  {id:'p500', stars:500, coins:65000, bonus:'+30%'}
+];
+function renderPacks(){
+  $('packs').innerHTML = PACKS.map(p=>`<button class="pack" data-pack="${p.id}"><span class="coin"></span><span class="c"><b>${coinsText(p.coins)}</b>${p.bonus?`<small>${t('pack.bonus',{b:p.bonus})}</small>`:''}</span><span class="st">⭐ ${p.stars}</span></button>`).join('');
+  $('packs').querySelectorAll('[data-pack]').forEach(b=>b.onclick=()=>buy(PACKS.find(p=>p.id===b.dataset.pack), b));
+}
+async function buy(pack, btn){
+  if (!CONFIG.apiUrl) return toast(t('pay.off'));
+  if (!tg || !tg.openInvoice) return toast(t('pay.tg'));
+  btn.disabled = true;
+  try{
+    const res = await fetch(CONFIG.apiUrl + '/invoice', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({pack: pack.id, initData: tg.initData})});
+    const {link, error} = await res.json();
+    if (!link) throw new Error(error || 'no link');
+    tg.openInvoice(link, status=>{
+      btn.disabled = false;
+      if (status === 'paid'){
+        S.coins += pack.coins; S.purchases = (S.purchases||0) + 1;
+        delta(pack.coins); haptic('notificationOccurred','success');
+        toast(t('pay.ok',{coins:coinsText(pack.coins)})); renderHUD(); save(); closeSheets();
+      } else if (status === 'failed'){
+        toast(t('pay.fail'));
+      }
+    });
+  }catch(e){
+    btn.disabled = false;
+    toast(t('pay.err'));
+  }
+}
+
+/* ---------- профиль ---------- */
+const tgFull = user ? [user.first_name,user.last_name].filter(Boolean).join(' ') : '';
+const tgName = () => tgFull || t('player');
+const displayName = () => S.nick || tgName();
+let photo = '';   // data:URL своей фотографии
+function paintAvatar(el){
+  const src = photo || (user && user.photo_url) || '';
+  if (src) el.innerHTML = `<img src="${esc(src)}" alt="">`;
+  else el.textContent = displayName()[0].toUpperCase();
+}
+function paintProfile(){ $('name').textContent = displayName(); paintAvatar($('avatar')); }
+function fillProfileForm(){
+  $('pfNick').value = S.nick || ''; $('pfNick').placeholder = tgFull || t('pf.nickPh');
+  $('pfEmail').value = S.email || ''; $('pfPhone').value = S.phone || ''; $('pfWallet').value = S.wallet || '';
+  $('pfErr').textContent = ''; paintAvatar($('pfAvatar'));
+  $('pfPhoneTg').hidden = !(tg && tg.requestContact);
+}
+// фото ужимается до 192×192 и хранится частями: в облаке Telegram одно значение до 4096 символов
+const PHOTO_CHUNK = 4000;
+function savePhoto(){
+  try { localStorage.setItem(KEY+'_photo', photo); } catch(e){}
+  if (!cloud) return;
+  const parts = photo.match(new RegExp('.{1,'+PHOTO_CHUNK+'}','g')) || [];
+  parts.forEach((part,i)=>cloud.setItem(KEY+'_ph'+i, part, ()=>{}));
+  S.photoParts = parts.length; save();
+}
+function loadPhoto(cb){
+  const local = () => { try { photo = localStorage.getItem(KEY+'_photo') || ''; } catch(e){} cb(); };
+  if (!cloud || !S.photoParts) return local();
+  const keys = Array.from({length:S.photoParts}, (_,i)=>KEY+'_ph'+i);
+  cloud.getItems(keys, (err, vals)=>{
+    if (err || !vals) return local();
+    photo = keys.map(k=>vals[k]||'').join(''); cb();
+  });
+}
+$('pfPhotoBtn').onclick = ()=>$('pfFile').click();
+$('pfFile').onchange = e=>{
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image();
+  img.onload = ()=>{
+    const size = 192, c = document.createElement('canvas'); c.width = c.height = size;
+    const k = Math.max(size/img.width, size/img.height), w = img.width*k, h = img.height*k;
+    c.getContext('2d').drawImage(img, (size-w)/2, (size-h)/2, w, h);
+    $('pfAvatar').innerHTML = `<img src="${c.toDataURL('image/jpeg', .8)}" alt="">`;
+    $('pfAvatar').dataset.pending = c.toDataURL('image/jpeg', .8);
+    URL.revokeObjectURL(img.src);
+  };
+  img.onerror = ()=>{ $('pfErr').textContent = t('pf.errFile'); };
+  img.src = URL.createObjectURL(f);
+  e.target.value = '';
+};
+$('pfPhoneTg').onclick = ()=>{
+  tg.requestContact((shared, res)=>{
+    const ph = shared && res && res.responseUnsafe && res.responseUnsafe.contact && res.responseUnsafe.contact.phone_number;
+    if (ph) $('pfPhone').value = ph.startsWith('+') ? ph : '+' + ph;
+    else if (shared) $('pfErr').textContent = t('pf.phoneSent');
+  });
+};
+$('pfSave').onclick = ()=>{
+  const nick = $('pfNick').value.trim(), email = $('pfEmail').value.trim(), phone = $('pfPhone').value.replace(/[\s()-]/g,'');
+  if (nick && (nick.length < 2 || !/^[\p{L}\p{N} _.-]+$/u.test(nick))) return $('pfErr').textContent = t('pf.errNick');
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return $('pfErr').textContent = t('pf.errEmail');
+  if (phone && !/^\+?\d{10,15}$/.test(phone)) return $('pfErr').textContent = t('pf.errPhone');
+  const wallet = $('pfWallet').value.trim();
+  // адрес TON (UQ…/EQ…, 48 символов), сырой адрес 0:… или ссылка https://
+  if (wallet && !/^[UEk0][Qf][A-Za-z0-9_-]{46}$/.test(wallet) && !/^-?\d:[0-9a-fA-F]{64}$/.test(wallet) && !/^https:\/\/\S+$/.test(wallet))
+    return $('pfErr').textContent = t('pf.errWallet');
+  S.nick = nick; S.email = email; S.phone = phone; S.wallet = wallet;
+  if ($('pfAvatar').dataset.pending){ photo = $('pfAvatar').dataset.pending; delete $('pfAvatar').dataset.pending; savePhoto(); }
+  save(); paintProfile(); closeSheets(); toast(t('pf.saved'));
+};
+
+/* ---------- колесо фортуны ---------- */
+const FREE_BET = 50; // ставка бесплатного вращения слота
+// w: вес (шанс), coins или spins: приз
+const WHEEL = [
+  {coins:100,  w:25, fill:'#57306A'},
+  {spins:3,    w:15, fill:'#3BB273'},
+  {coins:250,  w:20, fill:'#E3263E'},
+  {coins:500,  w:13, fill:'#57306A'},
+  {spins:5,    w:10, fill:'#3BB273'},
+  {coins:1000, w:8,  fill:'#E3263E'},
+  {spins:10,   w:5,  fill:'#3BB273'},
+  {coins:2500, w:4,  fill:'#FFD23F'}
+];
+const SEG = 360 / WHEEL.length;
+let wheelAngle = 0, wheelBusy = false;
+const wLabel = p => p.coins ? fmt(p.coins) : `${p.spins} ${plural(p.spins, L().spinForms)}`;
+function drawWheel(){
+  const pt = (a, r) => `${(r*Math.sin(a*Math.PI/180)).toFixed(2)} ${(-r*Math.cos(a*Math.PI/180)).toFixed(2)}`;
+  $('wheel').innerHTML = `<circle r="99" fill="#A3142A"/>` + WHEEL.map((p,i)=>{
+    const a0 = i*SEG, a1 = a0+SEG, c = a0+SEG/2;
+    const ink = p.fill==='#FFD23F' || p.fill==='#3BB273' ? '#2A1233' : '#FFF4E0';
+    return `<path d="M0 0 L${pt(a0,92)} A92 92 0 0 1 ${pt(a1,92)} Z" fill="${p.fill}" stroke="#A3142A" stroke-width="2"/>
+      <g transform="rotate(${c>180 ? c+90 : c-90})"><text x="${c>180 ? -58 : 58}" y="5" text-anchor="middle" fill="${ink}" ${p.spins?'font-size="10"':''}>${wLabel(p)}</text></g>`;
+  }).join('');
+  $('wheel').style.transition = 'none';
+  $('wheel').style.transform = `rotate(${wheelAngle}deg)`;
+}
+function renderWheel(){
+  drawWheel();
+  const used = S.lastWheel === today();
+  $('wheelBtn').disabled = used || wheelBusy;
+  $('wheelBtn').textContent = used ? t('wheel.tomorrow') : t('wheel.btn');
+  if (!wheelBusy) $('wheelRes').textContent = '';
+}
+$('wheelBtn').onclick = ()=>{
+  if (wheelBusy || S.lastWheel === today()) return;
+  let x = Math.random() * WHEEL.reduce((a,p)=>a+p.w,0), idx = 0;
+  for (; idx<WHEEL.length; idx++) if ((x -= WHEEL[idx].w) < 0) break;
+  const prize = WHEEL[idx];
+  S.lastWheel = today(); save();              // отмечаем сразу, чтобы закрытие шторки не дало второе вращение
+  wheelBusy = true; $('wheelBtn').disabled = true;
+  sndPress(); haptic('impactOccurred','medium');
+  const center = idx*SEG + SEG/2 + (Math.random()-.5)*SEG*.6;
+  const turn = (360 - center - (wheelAngle % 360) + 720) % 360;
+  const total = 360*6 + turn, dur = reduced ? 600 : 4200;
+  const startAngle = wheelAngle; wheelAngle += total;
+  const w = $('wheel');
+  w.style.transition = `transform ${dur}ms cubic-bezier(.12,.7,.2,1)`;
+  w.style.transform = `rotate(${wheelAngle}deg)`;
+  // щелчок на каждом секторе: время по кривой замедления
+  const segs = Math.floor(total / SEG);
+  for (let k=1;k<=segs;k++){
+    const t = 1 - Math.cbrt(1 - k/segs);
+    setTimeout(sndTick, t*dur);
+  }
+  setTimeout(()=>{
+    wheelBusy = false; renderWheel();
+    if (prize.coins){ S.coins += prize.coins; delta(prize.coins); $('wheelRes').textContent = `+${coinsText(prize.coins)}`; }
+    else { S.freeSpins += prize.spins; $('wheelRes').textContent = t('wheel.resFree',{n:prize.spins, bet:FREE_BET}); }
+    haptic('notificationOccurred','success');
+    tone(660, 990, .25, 'triangle', .25); tone(990, 1320, .3, 'triangle', .2, .12);
+    renderHUD(); save();
+  }, dur + 100);
+};
+
+function openSheet(name){
+  if (name==='wheel') renderWheel();
+  if (name==='profile') fillProfileForm();
+  if (name==='deposit') renderPacks();
+  if (name==='daily') renderDaily();
+  if (name==='awards') { renderAch(); renderTop(); }
+  if (name==='info') renderPay();
+  $('sheetBg').style.display='block';
+  $('sheet-'+name).classList.add('open');
+  haptic('selectionChanged');
+}
+function closeSheets(){
+  document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));
+  $('sheetBg').style.display='none';
+}
+function nextDailyDay(){ return S.lastDaily===yesterday() ? (S.dailyDay%7)+1 : 1; }
+function renderDaily(){
+  const claimed = S.lastDaily===today();
+  const cur = claimed ? S.dailyDay : nextDailyDay();
+  $('days').innerHTML = DAILY.map((v,i)=>{
+    const d=i+1, done = d<cur || (claimed && d===cur), isToday = d===cur;
+    return `<div class="day${done?' done':''}${isToday?' today':''}${d===7?' big':''}">${t('daily.day',{n:d})}<b>${fmt(v)}</b></div>`;
+  }).join('');
+  $('claim').disabled = claimed;
+  $('claim').textContent = claimed ? t('daily.tomorrow') : t('daily.claim',{coins:coinsText(DAILY[cur-1])});
+}
+$('claim').onclick = ()=>{
+  if (S.lastDaily===today()) return;
+  const d = nextDailyDay();
+  S.dailyDay = d; S.lastDaily = today(); S.coins += DAILY[d-1];
+  haptic('notificationOccurred','success');
+  checkAch(); renderDaily(); renderHUD(); save();
+};
+function renderAch(){
+  $('tab-ach').innerHTML = ACH.map(a=>{
+    const got = !!S.ach[a.id];
+    return `<div class="row ${got?'got':'locked'}"><div class="ic">${a.ic}</div><div class="t"><b>${t('ach.'+a.id+'.t')}</b><small>${t('ach.'+a.id+'.d',{n:fmt(10000)})}</small></div><div class="r">${got?t('ach.got'):'+'+fmt(a.r)}</div></div>`;
+  }).join('');
+}
+async function renderTop(){
+  const el = $('tab-top');
+  const me = `<div class="row"><div class="ic">⭐</div><div class="t"><b>${esc(displayName())}</b><small>${t('top.me',{n:S.level, best:fmt(S.best)})}</small></div><div class="r">${fmt(S.coins)}</div></div>`;
+  if (!CONFIG.leaderboardUrl){ el.innerHTML = me + `<p class="note">${t('top.alone')}</p>`; return; }
+  el.innerHTML = `<p class="note">${t('top.loading')}</p>`;
+  try{
+    const list = await (await fetch(CONFIG.leaderboardUrl+'?limit=20')).json();
+    el.innerHTML = list.map((p,i)=>`<div class="row"><div class="ic">${['🥇','🥈','🥉'][i]||i+1}</div><div class="t"><b>${esc(p.name)}</b></div><div class="r">${fmt(p.score)}</div></div>`).join('') + `<p class="note">${t('top.yours')}</p>` + me;
+  }catch(e){ el.innerHTML = me + `<p class="note">${t('top.err')}</p>`; }
+}
+function submitScore(){
+  if (!CONFIG.leaderboardUrl || !tg) return;
+  fetch(CONFIG.leaderboardUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData, name:displayName(), score:S.coins})}).catch(()=>{});
+}
+function renderPay(){
+  const lb = BETS[S.betIdx]/ROWS*modePay();
+  const row = (sy, n) => { const x = sy.pay*lenMult(n);
+    return `<div class="pay"><div class="sy">${Array(n).fill(symHTML(sy)).join('')}</div><span class="x">${fmt(Math.round(lb*x))}${S.mode===2?`<small>${t('pay.bent',{v:fmt(Math.round(lb*sy.pay*BENT_K))})}</small>`:''}</span></div>`; };
+  const lens = []; for (let n=S.reels;n>=3;n--) lens.push(n);
+  $('paytable').innerHTML = lens.map(n => (S.reels>3 ? `<p class="note" style="margin:14px 0 2px">${t('pay.inRow',{n})}</p>` : '') +
+    [...SYMS].reverse().map(s=>row(s,n)).join('')).join('');
+}
+const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openSheet(b.dataset.open));
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheets);
+$('sheetBg').onclick = closeSheets;
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('on',x===b));
+  $('tab-ach').hidden = b.dataset.tab!=='ach'; $('tab-top').hidden = b.dataset.tab!=='top';
+});
+$('spin').onclick = spin;
+$('setLang').onchange = e=>{
+  S.lang = e.target.value; haptic('selectionChanged'); applyLang(); paintProfile(); renderHUD(); save();
+  if (!spinning) { $('msg').className='msg'; $('msg').textContent = t('msg.start'); $('lines').innerHTML=''; }
+};
+document.querySelectorAll('[data-theme-pick]').forEach(b=>b.onclick=()=>{
+  S.theme = b.dataset.themePick; haptic('selectionChanged'); applyTheme(); save();
+});
+document.querySelectorAll('[data-reels]').forEach(b=>b.onclick=()=>{
+  if (spinning || S.reels === +b.dataset.reels) return;
+  S.reels = +b.dataset.reels; haptic('selectionChanged'); buildReels(); renderHUD(); save();
+});
+$('snd').onclick = ()=>{ S.sound = !S.sound; if (!S.sound) stopTicks(); else sndPress(); $('snd').textContent = S.sound ? '🔊' : '🔇'; save(); };
+if (CONFIG.testMode){
+  $('testCoins').hidden = false;
+  $('testCoins').onclick = ()=>{ S.coins += 10000; delta(10000); haptic('notificationOccurred','success'); renderHUD(); save(); };
+}
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{
+  if (spinning) return; S.mode = +b.dataset.mode; haptic('selectionChanged'); renderHUD(); save();
+});
+$('betDown').onclick = ()=>{ if(S.betIdx>0){S.betIdx--; haptic('selectionChanged'); renderHUD(); save();} };
+$('betUp').onclick = ()=>{ if(S.betIdx<maxBetIdx(S.level)){S.betIdx++; haptic('selectionChanged'); renderHUD(); save();} };
+
+/* ---------- старт ---------- */
+load(()=>{
+  if (!I18N[S.lang]) S.lang = detectLang();
+  applyLang(); applyTheme();
+  paintProfile();
+  loadPhoto(paintProfile);
+  if (![3,4].includes(S.reels)) S.reels = 3;
+  buildReels();
+  shownCoins = S.coins; $('snd').textContent = S.sound ? '🔊' : '🔇'; renderHUD();
+  if (S.lastDaily !== today()) setTimeout(()=>openSheet('daily'), 400);
+});
+</script>
+</body>
+</html>
