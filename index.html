@@ -65,7 +65,6 @@ button:focus-visible{outline:3px solid var(--lemon);outline-offset:2px}
 .delta{position:absolute;right:16px;top:50%;font-weight:700;font-size:18px;pointer-events:none;animation:fly 1.1s ease-out forwards}
 .delta.minus{color:var(--bad)}.delta.plus{color:var(--leaf)}
 @keyframes fly{from{opacity:1;transform:translateY(-50%)}to{opacity:0;transform:translateY(-160%)}}
-.test{position:absolute;left:10px;top:50%;transform:translateY(-50%);background:var(--leaf);color:var(--ink);font-weight:700;font-size:13px;border-radius:10px;padding:6px 8px}
 .hint{text-align:center;font-size:13px;color:var(--muted);margin-top:12px}
 .hint b{color:var(--gold)}
 .coin{width:24px;height:24px;border-radius:50%;background:var(--lemon);box-shadow:inset 0 -3px 0 #E0A800;flex:none}
@@ -135,7 +134,9 @@ nav{margin-top:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:6px;pad
 .pack .c b{display:block;font-size:18px;font-variant-numeric:tabular-nums}
 .pack .c small{color:var(--leaf);font-weight:700}
 .pack .st{background:var(--lemon);color:var(--ink);font-weight:700;border-radius:12px;padding:8px 12px;white-space:nowrap}
-.pack:disabled{opacity:.6}
+.pack:disabled,.pack.off{opacity:.45}
+.agree{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:14px}
+.agree input{width:22px;height:22px;accent-color:var(--leaf);flex:none}
 nav button{background:var(--plum-2);border-radius:14px;padding:10px 2px;font-size:12px;position:relative}
 nav .dot{right:10px}
 .spin small{display:block;font-family:Rubik,sans-serif;font-size:11px;font-weight:700;margin-top:2px}
@@ -182,13 +183,23 @@ nav .dot{position:absolute;top:8px;right:14px;width:9px;height:9px;border-radius
 .tabs button.on{background:var(--lemon);color:var(--ink);font-weight:700}
 
 /* тосты */
+.splash{position:fixed;inset:0;z-index:50;background:var(--plum);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;transition:opacity .35s}
+.splash.hide{opacity:0;pointer-events:none}
+.splash-logo{width:132px;height:132px}
+.splash-logo .spin-arc{animation:arc 1.1s linear infinite}
+.splash-logo .cherries{transform-origin:286px 156px;animation:sway 1.6s ease-in-out infinite}
+@keyframes arc{to{transform:rotate(360deg)}}
+@keyframes sway{50%{transform:rotate(-5deg)}}
+.splash .word{font-family:Unbounded,Rubik,sans-serif;font-weight:800;font-size:34px;line-height:1}
+.splash .word .f{color:var(--gold)}.splash .word .s{color:var(--cherry);display:inline-block;transform:rotate(-4deg)}
 .toast{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top,0px));transform:translate(-50%,-140%);background:var(--leaf);color:var(--ink);font-weight:700;padding:10px 16px;border-radius:14px;z-index:30;transition:transform .3s;max-width:90%;text-align:center}
 .toast.show{transform:translate(-50%,0)}
 
-@media (prefers-reduced-motion:reduce){.cell.hit{animation:none}.sheet,.toast{transition:none}}
+@media (prefers-reduced-motion:reduce){.splash-logo .spin-arc,.splash-logo .cherries{animation:none}.cell.hit{animation:none}.sheet,.toast{transition:none}}
 </style>
 </head>
 <body>
+<div class="splash" id="splash" aria-hidden="true"><svg class="splash-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Fruit Spin"> <defs> <radialGradient id="lgbg" cx="50%" cy="30%" r="75%"> <stop offset="0" stop-color="#57306A"/><stop offset="1" stop-color="#2A1233"/> </radialGradient> <radialGradient id="lgch" cx="35%" cy="30%" r="75%"> <stop offset="0" stop-color="#FF6B7D"/><stop offset=".55" stop-color="#E3263E"/><stop offset="1" stop-color="#A3142A"/> </radialGradient> </defs> <rect width="512" height="512" rx="112" fill="url(#lgbg)"/> <g class="spin-arc" style="transform-origin:256px 268px"> <path d="M256 92a176 176 0 1 1 -152.4 88" fill="none" stroke="#FFD23F" stroke-width="26" stroke-linecap="round"/> <path d="M128 138L77 165L131 197Z" fill="#FFD23F" stroke="#FFD23F" stroke-width="12" stroke-linejoin="round"/> </g> <g class="cherries"> <path d="M206 318C214 250 240 196 286 156" fill="none" stroke="#6B4423" stroke-width="12" stroke-linecap="round"/> <path d="M318 296C312 240 302 196 286 156" fill="none" stroke="#6B4423" stroke-width="12" stroke-linecap="round"/> <path d="M286 156c18-34 58-48 92-38c-14 34-52 52-92 38z" fill="#3BB273"/> <path d="M290 154c26-10 52-20 80-32" stroke="#2A8C55" stroke-width="5" fill="none" stroke-linecap="round"/> <circle cx="206" cy="342" r="66" fill="url(#lgch)"/> <circle cx="322" cy="320" r="62" fill="url(#lgch)"/> <ellipse cx="184" cy="318" rx="16" ry="22" fill="#fff" opacity=".45" transform="rotate(-25 184 318)"/> <ellipse cx="302" cy="298" rx="14" ry="20" fill="#fff" opacity=".45" transform="rotate(-25 302 298)"/> </g> </svg><div class="word"><span class="f">Fruit</span> <span class="s">Spin</span></div></div>
 <div class="app">
   <header class="top">
     <button class="who-btn" data-open="profile" aria-label="Профиль" data-i18n-aria="profile">
@@ -203,7 +214,7 @@ nav .dot{position:absolute;top:8px;right:14px;width:9px;height:9px;border-radius
 
   <h1><span class="f">Fruit</span> <span class="s">Spin</span></h1>
 
-  <div class="balance" id="balance"><span class="coin"></span><span class="lbl" data-i18n="balance">Баланс</span><span class="num" id="coins">0</span><button class="test" id="testCoins" hidden>+10 000</button></div>
+  <div class="balance" id="balance"><span class="coin"></span><span class="lbl" data-i18n="balance">Баланс</span><span class="num" id="coins">0</span></div>
 
   <div class="machine">
     <div class="window" id="window">
@@ -281,8 +292,9 @@ nav .dot{position:absolute;top:8px;right:14px;width:9px;height:9px;border-radius
   <button class="close" data-close aria-label="Закрыть" data-i18n-aria="close">✕</button>
   <h2 data-i18n="dep.title">Пополнить баланс</h2>
   <p class="sub" data-i18n="dep.sub"></p>
+  <p class="note" data-i18n-html="dep.terms" style="margin:0 0 12px"></p>
+  <label class="agree"><input type="checkbox" id="termsOk"><span data-i18n="dep.agree"></span></label>
   <div id="packs"></div>
-  <p class="note" data-i18n="noCash"></p>
 </section>
 
 <section class="sheet" id="sheet-wheel" role="dialog" aria-label="Колесо фортуны">
@@ -325,12 +337,10 @@ const CONFIG = {
   // URL сервера рейтинга. Пусто: рейтинг показывает только текущего игрока.
   // GET  {url}?limit=20 -> [{name, score}]   POST {url} {initData, score}
   leaderboardUrl: '',
-  // адрес сервера бота (worker.js) для оплаты звёздами, например https://fruit-spin.имя.workers.dev
-  apiUrl: '',
-  startCoins: 1000,
-  // ТЕСТ: кнопка «+10 000» у баланса. Перед запуском для игроков поставить false.
-  testMode: true
+  startCoins: 1000
 };
+// адрес Cloudflare Worker для оплаты звёздами (без / в конце), например https://fruit-spin.имя.workers.dev
+const PAY_API = '';
 
 const PLUM_SVG = '<svg viewBox="0 0 64 64" aria-label="слива"><defs><radialGradient id="pg" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#B58AD6"/><stop offset=".45" stop-color="#7A3FA8"/><stop offset="1" stop-color="#3E1660"/></radialGradient></defs><path d="M33 10c3-5 9-7 14-6-2 5-7 8-13 8z" fill="#3BB273"/><path d="M32 13c0-3 1-6 3-8" stroke="#6B4423" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="32" cy="38" rx="21" ry="23" fill="url(#pg)"/><path d="M32 16c-4 8-4 30 0 44" stroke="#3E1660" stroke-width="2" fill="none" opacity=".5"/><ellipse cx="24" cy="28" rx="5" ry="7" fill="#fff" opacity=".25"/></svg>';
 
@@ -434,7 +444,10 @@ ru: {
   'pf.saved':'Профиль сохранён',
   'dep.title':'Пополнить баланс', 'dep.sub':'Оплата звёздами Telegram. Монеты приходят сразу после оплаты.',
   noCash:'Монеты игровые: их нельзя вывести или обменять на деньги.',
-  'pack.bonus':'{b} бонус', 'pay.off':'Оплата ещё не подключена', 'pay.tg':'Открой игру в Telegram, чтобы оплатить',
+  'dep.terms':'Условия: монеты игровые, их нельзя вывести, продать или обменять на деньги. Покупка окончательная, но если монеты не пришли из-за ошибки, звёзды вернём. Вопросы по оплате: команда /paysupport в боте. Поддержка Telegram с покупками в этой игре не помогает.',
+  'dep.agree':'Я прочитал и принимаю условия',
+  'dep.needAgree':'Сначала прими условия покупки',
+  'pack.bonus':'{b} бонус', 'pay.off':'Оплата ещё не подключена', 'pay.tg':'Оплата работает только внутри Telegram', 'pay.pending':'Оплата обрабатывается. Монеты придут, как только Telegram её подтвердит',
   'pay.ok':'+{coins} на балансе', 'pay.fail':'Оплата не прошла, звёзды не списаны. Попробуй ещё раз',
   'pay.err':'Не удалось открыть оплату. Проверь интернет и попробуй ещё раз',
   'wheel.title':'Колесо фортуны', 'wheel.sub':'Одно бесплатное вращение в день. Приз: монеты или бесплатные вращения слота по ставке {bet}.',
@@ -484,7 +497,10 @@ uk: {
   'pf.saved':'Профіль збережено',
   'dep.title':'Поповнити баланс', 'dep.sub':'Оплата зірками Telegram. Монети надходять одразу після оплати.',
   noCash:'Монети ігрові: їх не можна вивести або обміняти на гроші.',
-  'pack.bonus':'{b} бонус', 'pay.off':'Оплату ще не підключено', 'pay.tg':'Відкрий гру в Telegram, щоб оплатити',
+  'dep.terms':'Умови: монети ігрові, їх не можна вивести, продати або обміняти на гроші. Покупка остаточна, але якщо монети не надійшли через помилку, зірки повернемо. Питання щодо оплати: команда /paysupport у боті. Підтримка Telegram із покупками в цій грі не допомагає.',
+  'dep.agree':'Я прочитав і приймаю умови',
+  'dep.needAgree':'Спочатку прийми умови покупки',
+  'pack.bonus':'{b} бонус', 'pay.off':'Оплату ще не підключено', 'pay.tg':'Оплата працює лише всередині Telegram', 'pay.pending':'Оплата обробляється. Монети надійдуть, щойно Telegram її підтвердить',
   'pay.ok':'+{coins} на балансі', 'pay.fail':'Оплата не пройшла, зірки не списано. Спробуй ще раз',
   'pay.err':'Не вдалося відкрити оплату. Перевір інтернет і спробуй ще раз',
   'wheel.title':'Колесо фортуни', 'wheel.sub':'Одне безкоштовне обертання на день. Приз: монети або безкоштовні обертання слота зі ставкою {bet}.',
@@ -534,7 +550,10 @@ en: {
   'pf.saved':'Profile saved',
   'dep.title':'Top up balance', 'dep.sub':'Pay with Telegram Stars. Coins arrive right after payment.',
   noCash:'Coins are for play only: they can’t be withdrawn or exchanged for money.',
-  'pack.bonus':'{b} bonus', 'pay.off':'Payments aren’t connected yet', 'pay.tg':'Open the game in Telegram to pay',
+  'dep.terms':'Terms: coins are for play only and can’t be withdrawn, sold or exchanged for money. Purchases are final, but if coins don’t arrive because of an error, we refund the Stars. Payment questions: send /paysupport to the bot. Telegram support can’t help with purchases in this game.',
+  'dep.agree':'I’ve read and accept the terms',
+  'dep.needAgree':'Accept the purchase terms first',
+  'pack.bonus':'{b} bonus', 'pay.off':'Payments aren’t connected yet', 'pay.tg':'Payments only work inside Telegram', 'pay.pending':'Payment is processing. Coins arrive as soon as Telegram confirms it',
   'pay.ok':'+{coins} added to your balance', 'pay.fail':'Payment failed and no Stars were charged. Try again',
   'pay.err':'Couldn’t open payment. Check your connection and try again',
   'wheel.title':'Wheel of fortune', 'wheel.sub':'One free spin a day. Prize: coins or free slot spins at a bet of {bet}.',
@@ -857,15 +876,19 @@ const PACKS = [
   {id:'p500', stars:500, coins:65000, bonus:'+30%'}
 ];
 function renderPacks(){
+  $('termsOk').checked = !!S.termsOk;
   $('packs').innerHTML = PACKS.map(p=>`<button class="pack" data-pack="${p.id}"><span class="coin"></span><span class="c"><b>${coinsText(p.coins)}</b>${p.bonus?`<small>${t('pack.bonus',{b:p.bonus})}</small>`:''}</span><span class="st">⭐ ${p.stars}</span></button>`).join('');
+  $('packs').querySelectorAll('.pack').forEach(b=>b.classList.toggle('off', !S.termsOk));
   $('packs').querySelectorAll('[data-pack]').forEach(b=>b.onclick=()=>buy(PACKS.find(p=>p.id===b.dataset.pack), b));
 }
+$('termsOk').onchange = e=>{ S.termsOk = e.target.checked; save(); renderPacks(); };
 async function buy(pack, btn){
-  if (!CONFIG.apiUrl) return toast(t('pay.off'));
+  if (!S.termsOk) return toast(t('dep.needAgree'));
+  if (!PAY_API) return toast(t('pay.off'));
   if (!tg || !tg.openInvoice) return toast(t('pay.tg'));
   btn.disabled = true;
   try{
-    const res = await fetch(CONFIG.apiUrl + '/invoice', {method:'POST', headers:{'Content-Type':'application/json'},
+    const res = await fetch(PAY_API + '/invoice', {method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({pack: pack.id, initData: tg.initData})});
     const {link, error} = await res.json();
     if (!link) throw new Error(error || 'no link');
@@ -877,7 +900,9 @@ async function buy(pack, btn){
         toast(t('pay.ok',{coins:coinsText(pack.coins)})); renderHUD(); save(); closeSheets();
       } else if (status === 'failed'){
         toast(t('pay.fail'));
-      }
+      } else if (status === 'pending'){
+        toast(t('pay.pending'));
+      }   // 'cancelled': игрок закрыл окно оплаты, ничего не делаем
     });
   }catch(e){
     btn.disabled = false;
@@ -1032,11 +1057,14 @@ function openSheet(name){
   $('sheetBg').style.display='block';
   $('sheet-'+name).classList.add('open');
   haptic('selectionChanged');
+  try { tg.BackButton.show(); } catch(e){}
 }
 function closeSheets(){
   document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));
   $('sheetBg').style.display='none';
+  try { tg.BackButton.hide(); } catch(e){}
 }
+try { tg.BackButton.onClick(closeSheets); } catch(e){}
 function nextDailyDay(){ return S.lastDaily===yesterday() ? (S.dailyDay%7)+1 : 1; }
 function renderDaily(){
   const claimed = S.lastDaily===today();
@@ -1105,10 +1133,6 @@ document.querySelectorAll('[data-reels]').forEach(b=>b.onclick=()=>{
   S.reels = +b.dataset.reels; haptic('selectionChanged'); buildReels(); renderHUD(); save();
 });
 $('snd').onclick = ()=>{ S.sound = !S.sound; if (!S.sound) stopTicks(); else sndPress(); $('snd').textContent = S.sound ? '🔊' : '🔇'; save(); };
-if (CONFIG.testMode){
-  $('testCoins').hidden = false;
-  $('testCoins').onclick = ()=>{ S.coins += 10000; delta(10000); haptic('notificationOccurred','success'); renderHUD(); save(); };
-}
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{
   if (spinning) return; S.mode = +b.dataset.mode; haptic('selectionChanged'); renderHUD(); save();
 });
@@ -1116,7 +1140,10 @@ $('betDown').onclick = ()=>{ if(S.betIdx>0){S.betIdx--; haptic('selectionChanged
 $('betUp').onclick = ()=>{ if(S.betIdx<maxBetIdx(S.level)){S.betIdx++; haptic('selectionChanged'); renderHUD(); save();} };
 
 /* ---------- старт ---------- */
+const splashT0 = Date.now();
 load(()=>{
+  const hideSplash = () => setTimeout(()=>$('splash').classList.add('hide'), Math.max(0, 900 - (Date.now()-splashT0)));
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(hideSplash, hideSplash);
   if (!I18N[S.lang]) S.lang = detectLang();
   applyLang(); applyTheme();
   paintProfile();
